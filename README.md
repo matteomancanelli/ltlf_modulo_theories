@@ -5,6 +5,7 @@
 ```
 git clone --recurse-submodules https://github.com/mancanelli/ltlf_modulo_theories
 cd ltlf_modulo_theories
+git submodule update --init --recursive
 ```
 
 ## Dependencies
