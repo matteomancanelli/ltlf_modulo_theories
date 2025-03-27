@@ -1,11 +1,24 @@
-import argparse
-
 from hoa.parsers import HOAParser
 from hoa.core import HOA
 from hoa.ast.label import LabelExpression, LabelAtom
 from hoa.ast.boolean_expression import And, Not, Or
 
 from utils import *
+
+def generate_chcs_from_automata(automaton_str):
+    hoa_parser = HOAParser()
+    automaton = hoa_parser(automaton_str)
+    chcs = automatonToCHCs(automaton)
+    return chcs
+
+def automatonToCHCs(automaton: HOA):
+    if (automaton.header.acceptance.name != "Buchi"):
+        raise Exception("The input automaton does not have the Buchi acceptance condition.")
+    
+    header = getHeader(automaton)
+    body = getBody(automaton)
+
+    return header + body
 
 def getHeader(automaton: HOA):
     props = [infix_to_prefix(prop) for prop in automaton.header.propositions]
@@ -28,10 +41,7 @@ def getHeader(automaton: HOA):
         data_buffer_str += f"   (= ({var}2 regN) ({var}1 reg))\n"
     data_buffer_str += "))\n\n"
 
-    header = data_buffer_str + header
-    header = decl_datatypes_str + header
-    header = "(set-logic HORN)\n\n" + header
-     
+    header = "(set-logic HORN)\n\n" + decl_datatypes_str + data_buffer_str + header     
     return header
 
 def getBody(automaton: HOA):
@@ -99,15 +109,6 @@ def getBody(automaton: HOA):
     body += "(check-sat)"
     return body
 
-def automatonToCHCs(automaton: HOA):
-    if (automaton.header.acceptance.name != "Buchi"):
-        raise Exception("The input automaton does not have the Buchi acceptance condition.")
-    
-    header = getHeader(automaton)
-    body = getBody(automaton)
-
-    return header + body
-
 def decodeLabel(label: LabelExpression, n: int):
     """Decodes a SPOT label into one or more vectors of {True, False, None} values, one for each AP."""
     def DecodeSingleProp(label):
@@ -142,22 +143,3 @@ def decodeLabel(label: LabelExpression, n: int):
         return [result]
         #raise Exception("We have a problem")
         # return DecodeSingleProp(label)
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Read the automaton and process it.")
-    parser.add_argument("filename", type=str, help="The name of the file containing the automaton.")
-    args = parser.parse_args()
-
-    with open(args.filename, 'r') as file:
-        automaton_str = file.read().strip()
-
-    hoa_parser = HOAParser()
-    automaton = hoa_parser(automaton_str)
-    chcs = automatonToCHCs(automaton)
-
-    with open(args.filename.replace(".automaton", ".chcs"), 'w') as file:
-        file.write(chcs)
-
-if __name__ == "__main__":
-    main()
