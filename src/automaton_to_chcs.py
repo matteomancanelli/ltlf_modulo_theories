@@ -8,8 +8,36 @@ from utils import *
 def generate_chcs_from_automata(automaton_str):
     hoa_parser = HOAParser()
     automaton = hoa_parser(automaton_str)
+
+    is_satisfiable = check_automaton_satisfiability(automaton)
+    if not is_satisfiable:
+        return "unsat"
+
     chcs = automatonToCHCs(automaton)
     return chcs
+
+def check_automaton_satisfiability(automaton: HOA):
+    # Check if there are any accepting states
+    has_accepting_states = False
+    for state in automaton.body.state2edges:
+        if state.acc_sig is not None:
+            has_accepting_states = True
+            break
+    
+    if not has_accepting_states:
+        return False
+    
+    # Check if there are any transitions
+    has_transitions = False
+    for state, edges in automaton.body.state2edges.items():
+        if edges:
+            has_transitions = True
+            break
+    
+    if not has_transitions:
+        return False
+    
+    return True
 
 def automatonToCHCs(automaton: HOA):
     if (automaton.header.acceptance.name != "Buchi"):
@@ -27,8 +55,8 @@ def getHeader(automaton: HOA):
     vars = set()
     for i, prop in enumerate(props):
         header += f"(define-fun C{i} ((reg Registers)) Bool\n"
-        prop, i_vars = transform(prop)
-        vars.update(i_vars)
+        prop, new_vars = transform(prop)
+        vars.update(new_vars)
         header += f"   {prop}\n)\n\n"
 
     decl_datatypes_str = "(declare-datatypes () ((Registers (mk-state\n"
@@ -36,9 +64,14 @@ def getHeader(automaton: HOA):
         decl_datatypes_str += f"   ({var} Int)\n"
     decl_datatypes_str += "))))\n\n"
 
+    duplicates = get_multiple_suffix_variables(vars)
     data_buffer_str = "(define-fun Trans ((reg Registers) (regN Registers)) Bool\n(and \n"
-    for var in get_multiple_suffix_variables(vars):
-        data_buffer_str += f"   (= ({var}2 regN) ({var}1 reg))\n"
+    if duplicates:
+        for var in duplicates:
+            data_buffer_str += f"   (= ({var}_2 regN) ({var}_1 reg))\n"
+    else:
+        for var in vars:
+            data_buffer_str += f"   (= ({var} regN) ({var} reg))\n"
     data_buffer_str += "))\n\n"
 
     header = "(set-logic HORN)\n\n" + decl_datatypes_str + data_buffer_str + header     

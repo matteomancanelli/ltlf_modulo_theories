@@ -8,7 +8,8 @@ class Formula:
     def get_closure(self):
         """Get the Fischer-Ladner closure of the formula."""
         closure = set()
-        self._add_to_closure(closure)
+        formula = Conjunction(self, Finally(Last()))
+        formula._add_to_closure(closure)
         return closure
     
     def _add_to_closure(self, closure):
@@ -41,20 +42,36 @@ class Last(Atom):
     """Special atom representing the end of the trace."""
     def __init__(self):
         super().__init__("last")
+    
+    def __str__(self):
+        return str(self.name)
 
-class Alive(Atom):
-    def __init__(self):
-        super().__init__("alive")
+    def __eq__(self, other):
+        return (
+            isinstance(other, Last) or
+            isinstance(other, Negation) and
+            isinstance(other.arg, Next) and
+            isinstance(other.arg.arg, TrueFormula)
+        )
+    
+    def __hash__(self):
+        return hash(str(Negation(Next(TrueFormula()))))
 
 class TrueFormula(Atom):
     """Formula representing logical true."""
     def __init__(self):
         super().__init__("true")
+    
+    def __str__(self):
+        return str(self.name)
 
 class FalseFormula(Atom):
     """Formula representing logical false."""
     def __init__(self):
         super().__init__("false")
+    
+    def __str__(self):
+        return str(self.name)
 
 class Negation(Formula):
     """Negation of a formula."""
@@ -77,6 +94,12 @@ class Negation(Formula):
     
     def _add_to_closure(self, closure):
         if self in closure:
+            return
+        
+        if isinstance(self.arg, Next) and isinstance(self.arg.arg, TrueFormula):
+            closure.add(Last())
+            closure.add(Globally(FalseFormula()))
+            closure.add(FalseFormula())
             return
         
         closure.add(self)
