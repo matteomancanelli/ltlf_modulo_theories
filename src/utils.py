@@ -3,6 +3,19 @@ from collections import Counter
 
 from formula import *
 
+
+def read_formula(file_path):
+    with open(file_path, 'r') as file:
+        lines = [line.strip() for line in file if line.strip()]
+
+    formula_str = lines[0]
+    type_lines = lines[1:]
+
+    type_dict = {var.strip(): var_type.strip() for var, var_type in map(lambda line: line.split(':'), type_lines)}
+
+    return formula_str, type_dict
+
+
 def to_nnf(formula):
     """Convert a formula to Negation Normal Form."""
     if isinstance(formula, Atom):

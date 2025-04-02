@@ -1,30 +1,26 @@
 from formula import *
 from utils import *
-import re
-from collections import Counter
 
-def generate_chcs_from_ltlmt(formula):
-    formula = to_nnf(formula)
+def generate_chcs_from_ltlmt(formula, type_dict):
     closure = list(formula.get_closure())
     pos_dict = {subformula: idx for idx, subformula in enumerate(closure)}
-
-    print(f"Position dictionary: {pos_dict}")
+    dim = len(pos_dict)
 
     formula_index = pos_dict[formula]
     last_index = pos_dict[Last()]
 
-    header = getHeader(pos_dict)
-    body = getBody(formula_index, last_index, pos_dict)
+    header = getHeader(pos_dict, type_dict)
+    body = getBody(formula_index, last_index, dim)
 
     return header + body
 
-def getHeader(pos_dict):
+def getHeader(pos_dict, type_dict):
     header = "(set-logic HORN)\n\n"
 
     vars = set()
     expr_map = {}
     for formula in pos_dict:
-        if isinstance(formula, Atom):
+        if isinstance(formula, Atom) and not isinstance(formula, Last):
             prefix = infix_to_prefix(formula.name)
             smt_expr, used_vars = transform(prefix)
             expr_map[formula] = smt_expr
@@ -32,10 +28,20 @@ def getHeader(pos_dict):
 
     decl_datatypes_str = "(declare-datatypes () ((Registers (mk-state\n"
     for var in vars:
-        decl_datatypes_str += f"   ({var} Int)\n"
+        base_var = var.rsplit('_', 1)[0]
+        decl_datatypes_str += f"   ({var} {type_dict[base_var]})\n"
     decl_datatypes_str += "))))\n\n"
 
-    header += decl_datatypes_str
+    duplicates = get_multiple_suffix_variables(vars)
+    data_buffer_str = "(define-fun buff_upd ((reg Registers) (regN Registers)) Bool\n(and \n"
+    if duplicates:
+        for var in duplicates:
+            data_buffer_str += f"   (= ({var}_2 regN) ({var}_1 reg))\n"
+    else:
+        data_buffer_str += f"true\n"
+    data_buffer_str += "))\n\n"
+
+    header += decl_datatypes_str + data_buffer_str
 
     # Declare propositional state variables as Booleans
     for i in range(len(pos_dict)):
@@ -52,7 +58,7 @@ def getLoc(pos_dict, expr_map):
     loc = "(define-fun Loc ((reg Registers) " + " ".join([f"(f{i} Bool)" for i in range(len(pos_dict))]) + ") Bool\n  (and\n"
 
     for formula, idx in pos_dict.items():
-        if isinstance(formula, Atom):
+        if isinstance(formula, Atom) and not isinstance(formula, Last):
             smt_expr = expr_map[formula]
             loc += f"    (=> f{idx} {smt_expr})\n"
 
@@ -108,6 +114,7 @@ def getTrans(pos_dict):
              " ".join([f"(f{i} Bool)" for i in range(len(pos_dict))]) + " " + \
              " ".join([f"(f{i}_p Bool)" for i in range(len(pos_dict))]) + ") Bool\n  (and\n"
 
+    trans += f"    (buff_upd reg regN)\n"
     trans += f"    (not f{pos_dict[Last()]})\n"
 
     for formula, idx in pos_dict.items():
@@ -130,8 +137,7 @@ def getTrans(pos_dict):
     trans += "  ))\n\n"
     return trans
 
-def getBody(formula_index, last_index, pos_dict):
-    dim = len(pos_dict)
+def getBody(formula_index, last_index, dim):
     args = " ".join([f"(f{i} Bool)" for i in range(dim)])
     args_p = " ".join([f"(f{i}_p Bool)" for i in range(dim)])
 

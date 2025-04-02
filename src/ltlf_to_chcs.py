@@ -2,7 +2,6 @@ from formula import *
 from utils import *
 
 def generate_chcs_from_ltl(formula):
-    formula = to_nnf(formula)
     closure = list(formula.get_closure())
     pos_dict = {subformula: idx for idx, subformula in enumerate(closure)}
 

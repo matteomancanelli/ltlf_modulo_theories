@@ -23,9 +23,8 @@ def main():
     ltlf_file = os.path.join(output_dir, basename.replace(".ltlmt", ".ltlf"))
     automaton_file = os.path.join(output_dir, basename.replace(".ltlmt", ".automaton"))
     chcs_file = os.path.join(output_dir, basename.replace(".ltlmt", ".chcs"))
-
-    with open(args.file, 'r') as file:
-        formula_str = file.read().strip()
+    
+    formula_str, type_dict = read_formula(args.file)
 
     print("Parsing formula...")
     formula = parse_and_convert_black_formula(formula_str)
@@ -40,7 +39,7 @@ def main():
             automaton_str = file.read().strip()
 
         print("Converting automaton to CHCs...")
-        chcs_str = generate_chcs_from_automata(automaton_str)
+        chcs_str = generate_chcs_from_automata(automaton_str, type_dict)
 
         if chcs_str == "unsat":
             print("LTLMT formula is unsatisfiable.")
@@ -63,7 +62,7 @@ def main():
         formula = simplify(formula)
 
         print("Converting LTLMT formula to CHCs...")
-        chcs_str = generate_chcs_from_ltlmt(formula)
+        chcs_str = generate_chcs_from_ltlmt(formula, type_dict)
     else:
         raise Exception(f"Unknown method: {args.method}")
     

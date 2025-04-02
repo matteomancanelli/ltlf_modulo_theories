@@ -1,7 +1,7 @@
 import black_sat
 from formula import *
 
-def parse_and_convert_black_formula(formula_str, put_alive=False):
+def parse_and_convert_black_formula(formula_str):
     """Parse a formula string using black_sat and convert it to our internal representation."""
     alphabet = black_sat.alphabet()
     formula = black_sat.parse_formula(alphabet, formula_str)

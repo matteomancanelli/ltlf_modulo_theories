@@ -5,7 +5,7 @@ from hoa.ast.boolean_expression import And, Not, Or
 
 from utils import *
 
-def generate_chcs_from_automata(automaton_str):
+def generate_chcs_from_automata(automaton_str, type_dict):
     hoa_parser = HOAParser()
     automaton = hoa_parser(automaton_str)
 
@@ -13,7 +13,7 @@ def generate_chcs_from_automata(automaton_str):
     if not is_satisfiable:
         return "unsat"
 
-    chcs = automatonToCHCs(automaton)
+    chcs = automatonToCHCs(automaton, type_dict)
     return chcs
 
 def check_automaton_satisfiability(automaton: HOA):
@@ -39,42 +39,43 @@ def check_automaton_satisfiability(automaton: HOA):
     
     return True
 
-def automatonToCHCs(automaton: HOA):
+def automatonToCHCs(automaton: HOA, type_dict):
     if (automaton.header.acceptance.name != "Buchi"):
         raise Exception("The input automaton does not have the Buchi acceptance condition.")
     
-    header = getHeader(automaton)
+    header = getHeader(automaton, type_dict)
     body = getBody(automaton)
 
     return header + body
 
-def getHeader(automaton: HOA):
+def getHeader(automaton: HOA, type_dict):
     props = [infix_to_prefix(prop) for prop in automaton.header.propositions]
-    header = ""
+    header = "(set-logic HORN)\n\n"
 
     vars = set()
+    constraints = ""
     for i, prop in enumerate(props):
-        header += f"(define-fun C{i} ((reg Registers)) Bool\n"
+        constraints += f"(define-fun C{i} ((reg Registers)) Bool\n"
         prop, new_vars = transform(prop)
         vars.update(new_vars)
-        header += f"   {prop}\n)\n\n"
+        constraints += f"   {prop}\n)\n\n"
 
     decl_datatypes_str = "(declare-datatypes () ((Registers (mk-state\n"
     for var in vars:
-        decl_datatypes_str += f"   ({var} Int)\n"
+        base_var = var.rsplit('_', 1)[0]
+        decl_datatypes_str += f"   ({var} {type_dict[base_var]})\n"
     decl_datatypes_str += "))))\n\n"
 
     duplicates = get_multiple_suffix_variables(vars)
-    data_buffer_str = "(define-fun Trans ((reg Registers) (regN Registers)) Bool\n(and \n"
+    data_buffer_str = "(define-fun buff_upd ((reg Registers) (regN Registers)) Bool\n(and \n"
     if duplicates:
         for var in duplicates:
             data_buffer_str += f"   (= ({var}_2 regN) ({var}_1 reg))\n"
     else:
-        for var in vars:
-            data_buffer_str += f"   (= ({var} regN) ({var} reg))\n"
+        data_buffer_str += f"true\n"
     data_buffer_str += "))\n\n"
 
-    header = "(set-logic HORN)\n\n" + decl_datatypes_str + data_buffer_str + header     
+    header += decl_datatypes_str + data_buffer_str + constraints     
     return header
 
 def getBody(automaton: HOA):
@@ -122,7 +123,7 @@ def getBody(automaton: HOA):
             for label in decoded_labels:
                 h = f"(Q{dest_id} regNext{counter})"
                 
-                constraint = f"(Trans reg{counter} regNext{counter})"
+                constraint = f"(buff_upd reg{counter} regNext{counter})"
                 for i in range(n_prop):
                     if label[i] is True:
                         constraint += f" (C{i} regNext{counter})"
