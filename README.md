@@ -50,12 +50,10 @@ chmod +x setup.sh
 
 ---
 
-## **Running LTLMT**
+## **Usage**
 
-To run an example, execute:
+To run the tool:
+
 ```bash
-./run.sh LIA1.ltlmt 10
+python ./src/run.py --file <path_to_formula> --method <automata|symbolic>
 ```
-Here:
-- `LIA1.ltlmt` is the input formula file.
-- `10` is the parameter `N` passed to the script.

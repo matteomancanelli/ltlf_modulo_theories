@@ -11,7 +11,7 @@ from utils import *
 def main():
     argparser = argparse.ArgumentParser(description="Read a formula from a file and process it.")
     argparser.add_argument("--file", type=str, default="./input/LIA1.ltlmt", help="The name of the file containing the formula.")
-    argparser.add_argument("--method", type=str, default="symbolic", help="Choose the method.")
+    argparser.add_argument("--method", type=str, default="symbolic", help="Choose among 'automata' and 'symbolic'.")
     args = argparser.parse_args()
 
     input_file = args.file
@@ -19,6 +19,7 @@ def main():
 
     curr_dir = os.getcwd()
     output_dir = os.path.relpath("output")
+    os.makedirs(output_dir, exist_ok=True)
 
     ltlf_file = os.path.join(output_dir, basename.replace(".ltlmt", ".ltlf"))
     automaton_file = os.path.join(output_dir, basename.replace(".ltlmt", ".automaton"))
