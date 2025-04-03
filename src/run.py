@@ -1,5 +1,6 @@
 import os
 import argparse
+import time
 
 from parser import parse_and_convert_black_formula
 from automaton_to_chcs import generate_chcs_from_automata
@@ -26,6 +27,8 @@ def main():
     chcs_file = os.path.join(output_dir, basename.replace(".ltlmt", ".chcs"))
     
     formula_str, type_dict = read_formula(args.file)
+
+    start = time.time()
 
     print("Parsing formula...")
     formula = parse_and_convert_black_formula(formula_str)
@@ -72,7 +75,7 @@ def main():
     
 
     print("Running Z3 solver...")    
-    cli = f"z3 -T:60 {chcs_file}"
+    cli = f"z3 -T:600 {chcs_file}"
     result = launch(cli, cwd=curr_dir, capture_output=True)
 
     if result == "unsat":
@@ -84,6 +87,9 @@ def main():
     else:
         print("Unexpected result from Z3 solver.")
         print("Result:\n", result)
+    
+    end = time.time()
+    print("Time taken: {:.2f} seconds.".format(end - start))
 
 
 if __name__ == "__main__":

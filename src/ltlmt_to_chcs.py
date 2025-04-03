@@ -20,7 +20,7 @@ def getHeader(pos_dict, type_dict):
     vars = set()
     expr_map = {}
     for formula in pos_dict:
-        if isinstance(formula, Atom) and not isinstance(formula, Last):
+        if isinstance(formula, Atom) and not isinstance(formula, (Last, TrueFormula, FalseFormula)):
             prefix = infix_to_prefix(formula.name)
             smt_expr, used_vars = transform(prefix)
             expr_map[formula] = smt_expr
@@ -58,7 +58,7 @@ def getLoc(pos_dict, expr_map):
     loc = "(define-fun Loc ((reg Registers) " + " ".join([f"(f{i} Bool)" for i in range(len(pos_dict))]) + ") Bool\n  (and\n"
 
     for formula, idx in pos_dict.items():
-        if isinstance(formula, Atom) and not isinstance(formula, Last):
+        if isinstance(formula, Atom) and not isinstance(formula, (Last, TrueFormula, FalseFormula)):
             smt_expr = expr_map[formula]
             loc += f"    (=> f{idx} {smt_expr})\n"
 

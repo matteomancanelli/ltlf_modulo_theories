@@ -115,33 +115,40 @@ def to_xnf(formula):
 
 
 def infix_to_prefix(expression):
-    # Operator precedence and associativity
-    precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '<': 0, '<=': 0, '>': 0, '>=': 0, '=': 0}
-    operators = precedence.keys()
-    
-    # Function to handle precedence and associativity
+    # Define operator precedence
+    precedence = {
+        '+': 1, '-': 1,
+        '*': 2, '/': 2,
+        '<': 0, '<=': 0, '>': 0, '>=': 0, '=': 0
+    }
+    operators = set(precedence.keys())
+
     def precedence_of(op):
         return precedence[op]
 
-    # Helper function to process operators
     def process_operator(op_stack, out_stack):
         operator = op_stack.pop()
+        if len(out_stack) < 2:
+            raise ValueError("Insufficient operands for operator: " + operator)
         right = out_stack.pop()
         left = out_stack.pop()
         out_stack.append(f"({operator} {left} {right})")
 
-    op_stack = []   # Operator stack
-    out_stack = []  # Output stack
+    # tokenizer
+    token_pattern = r'next\([^)]+\)|wnext\([^)]+\)|<=|>=|==|!=|[+\-*/<>=()]|\w+'
+    tokens = re.findall(token_pattern, expression)
 
-    # Tokenize the expression (separate operators, parentheses, and operands)
-    tokens = re.findall(r'next\([^)]+\)|wnext\([^)]+\)|[+\-*/<>=()]+|\w+', expression)
-    #tokens = re.findall(r'[+\-*/<>=()]+|\w+', expression)
+    op_stack = []
+    out_stack = []
+
     for token in tokens:
         token = token.strip()
-        if re.match(r'next\([^)]+\)|wnext\([^)]+\)|\w+', token):  # Operand (variable, number, etc.)
-        #if token.isalnum():  # Operand (variable, number, etc.)
+        if not token:
+            continue
+
+        if re.match(r'next\([^)]+\)|wnext\([^)]+\)|^\w+$', token):  # operand
             out_stack.append(token)
-        elif token in operators:  # Operator
+        elif token in operators:
             while (op_stack and op_stack[-1] != '(' and precedence_of(op_stack[-1]) >= precedence_of(token)):
                 process_operator(op_stack, out_stack)
             op_stack.append(token)
@@ -150,11 +157,18 @@ def infix_to_prefix(expression):
         elif token == ')':
             while op_stack and op_stack[-1] != '(':
                 process_operator(op_stack, out_stack)
-            op_stack.pop()  # Pop the '(' from the stack
+            if not op_stack:
+                raise ValueError("Mismatched parentheses: too many ')'")
+            op_stack.pop()
 
-    # Process remaining operators
+    # Final processing
     while op_stack:
+        if op_stack[-1] == '(':
+            raise ValueError("Mismatched parentheses: too many '('")
         process_operator(op_stack, out_stack)
+
+    if len(out_stack) != 1:
+        raise ValueError("Malformed expression: leftover operands")
 
     return out_stack[-1]
 
@@ -206,24 +220,6 @@ def get_multiple_suffix_variables(vars):
     
     # Return variables with more than one occurrence
     return {base for base, count in base_counts.items() if count > 1}
-
-
-def strtobool(val):
-    """Convert a string representation of truth to true (1) or false (0).
-    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
-    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
-    'val' is anything else.
-    """
-    if isinstance(val, bool):
-        return val
-    
-    val = val.lower()
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
-        return True
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
-        return False
-    else:
-        raise ValueError("invalid truth value %r" % (val,))
 
 
 def discard_wnext(formula):
