@@ -44,7 +44,7 @@ python script.py
 echo "📦 Building and installing Python binding..."
 cd submodules/black/build/python
 python setup.py build
-sudo python setup.py install
+python setup.py install
 
 # Set up runtime linker config
 BLACK_LIB_PATH="$(pwd)/../src/lib"
