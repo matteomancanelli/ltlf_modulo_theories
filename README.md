@@ -16,33 +16,9 @@ cd ltlf_modulo_theories
 git submodule update --init --recursive
 ```
 
----
+## **Installing Dependencies and Building Submodules**
 
-## **Dependencies**
-
-### **Z3 Solver**
-LTLMT requires the Z3 solver. To install Z3:
-```bash
-sudo apt update
-sudo apt install z3
-```
-
-### **SPOT Library**
-The project also relies on the [SPOT library](https://spot.lre.epita.fr/) for automata-based operations. To install SPOT, follow the detailed instructions provided on their [installation page](https://spot.lre.epita.fr/install.html).
-
----
-
-## **Building Submodules**
-
-Before running the project, you must build and configure its submodules.
-
-1. **Install Required Python Packages**  
-   Ensure `pybind11` and `hoa-utils` are installed as part of the setup process.
-
-2. **Build the `black` Submodule**  
-   The `black` logic engine submodule is built automatically through the setup script.
-
-To initialize and build the submodules, run:
+To install the dependencies and build the submodules, run:
 ```bash
 chmod +x setup.sh
 ./setup.sh
@@ -56,4 +32,10 @@ To run the tool:
 
 ```bash
 python ./src/run.py --file <path_to_formula> --method <automata|symbolic>
+```
+
+For example:
+
+```bash
+python ./src/run.py --file ./input/LIA1-10.ltlmt --method symbolic
 ```
