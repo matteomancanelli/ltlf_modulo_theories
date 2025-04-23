@@ -1,6 +1,6 @@
-import os
 import argparse
 import time
+from pathlib import Path
 
 from parser import parse_and_convert_black_formula
 from automaton_to_chcs import generate_chcs_from_automata
@@ -11,22 +11,25 @@ from utils import *
 
 def main():
     argparser = argparse.ArgumentParser(description="Read a formula from a file and process it.")
-    argparser.add_argument("--file", type=str, default="./input/LIA1.ltlmt", help="The name of the file containing the formula.")
+    argparser.add_argument("--file", type=str, default="./input/LIA1-10.ltlmt", help="The name of the file containing the formula.")
     argparser.add_argument("--method", type=str, default="symbolic", help="Choose among 'automata' and 'symbolic'.")
     args = argparser.parse_args()
 
-    input_file = args.file
-    basename = os.path.basename(input_file)
+    # Base paths
+    project_root = Path(__file__).resolve().parent.parent
+    input_path = Path(args.file)
+    if not input_path.is_absolute():
+        input_path = project_root / input_path
 
-    curr_dir = os.getcwd()
-    output_dir = os.path.relpath("output")
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = project_root / "output"
+    output_dir.mkdir(exist_ok=True)
 
-    ltlf_file = os.path.join(output_dir, basename.replace(".ltlmt", ".ltlf"))
-    automaton_file = os.path.join(output_dir, basename.replace(".ltlmt", ".automaton"))
-    chcs_file = os.path.join(output_dir, basename.replace(".ltlmt", ".chcs"))
-    
-    formula_str, type_dict = read_formula(args.file)
+    basename = input_path.stem  # name without extension
+    ltlf_file = output_dir / f"{basename}.ltlf"
+    automaton_file = output_dir / f"{basename}.automaton"
+    chcs_file = output_dir / f"{basename}.chcs"
+
+    formula_str, type_dict = read_formula(str(input_path))
 
     start = time.time()
 
@@ -37,7 +40,7 @@ def main():
     if args.method == "automata":
         print("Converting formula to automaton...")    
         cli = f"ltlfilt --from-ltlf -f '{formula.to_string()}' | ltl2tgba -B | autfilt --to-finite > {automaton_file}"
-        launch(cli, cwd=curr_dir)
+        launch(cli, cwd=str(project_root))
 
         with open(automaton_file, 'r') as file:
             automaton_str = file.read().strip()
@@ -61,22 +64,23 @@ def main():
 
         print("Converting formula to CHCs...")
         chcs_str = generate_chcs_from_ltl(formula)
+
     elif args.method == "symbolic":
         formula = to_nnf(formula)
         formula = simplify(formula)
 
         print("Converting LTLMT formula to CHCs...")
         chcs_str = generate_chcs_from_ltlmt(formula, type_dict)
+    
     else:
         raise Exception(f"Unknown method: {args.method}")
     
     with open(chcs_file, 'w') as file:
         file.write(chcs_str)
-    
 
     print("Running Z3 solver...")    
     cli = f"z3 -T:600 {chcs_file}"
-    result = launch(cli, cwd=curr_dir, capture_output=True)
+    result = launch(cli, cwd=str(project_root), capture_output=True)
 
     if result == "unsat":
         print("CHC system is unsatisfiable.")

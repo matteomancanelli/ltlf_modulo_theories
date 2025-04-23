@@ -32,7 +32,7 @@ mkdir -p "$BUILD_DIR"
 cd submodules/black
 mkdir -p build
 cd build
-cmake -DBLACK_ENABLE_PYTHON_BINDINGS=ON ..
+cmake -DBLACK_ENABLE_PYTHON_BINDINGS=ON -Dfmt_DIR=/usr/local/lib/cmake/fmt ..
 make
 
 # Step 3: Install Black Python Bindings
