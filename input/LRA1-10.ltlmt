@@ -1,0 +1,3 @@
+c = 1.0 & G(wnext(c) = 10.0 * c) & X X X X X X X X X X (x = c & G(wnext(x) = x * 0.1) & F(x = 1.0))
+c: Real
+x: Real

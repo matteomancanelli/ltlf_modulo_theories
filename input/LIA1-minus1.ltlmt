@@ -1,0 +1,2 @@
+x=0 & G(wnext(x)=x+1) & F(x=0-1)
+x: Int

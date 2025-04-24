@@ -115,62 +115,53 @@ def to_xnf(formula):
 
 
 def infix_to_prefix(expression):
-    # Define operator precedence
-    precedence = {
-        '+': 1, '-': 1,
-        '*': 2, '/': 2,
-        '<': 0, '<=': 0, '>': 0, '>=': 0, '=': 0
-    }
-    operators = set(precedence.keys())
+    def precedence(op):
+        return {
+            '==': 0, '!=': 0, '<': 0, '<=': 0, '>': 0, '>=': 0, '=': 0,
+            '+': 1, '-': 1,
+            '*': 2, '/': 2
+        }.get(op, -1)
 
-    def precedence_of(op):
-        return precedence[op]
+    def is_operator(token):
+        return token in {'+', '-', '*', '/', '<', '<=', '>', '>=', '=', '==', '!='}
 
     def process_operator(op_stack, out_stack):
-        operator = op_stack.pop()
-        if len(out_stack) < 2:
-            raise ValueError("Insufficient operands for operator: " + operator)
+        op = op_stack.pop()
         right = out_stack.pop()
         left = out_stack.pop()
-        out_stack.append(f"({operator} {left} {right})")
+        out_stack.append(f"({op} {left} {right})")
 
-    # tokenizer
-    token_pattern = r'next\([^)]+\)|wnext\([^)]+\)|<=|>=|==|!=|[+\-*/<>=()]|\w+'
-    tokens = re.findall(token_pattern, expression)
-
-    op_stack = []
+    tokens = tokenize(expression)
     out_stack = []
+    op_stack = []
 
     for token in tokens:
-        token = token.strip()
-        if not token:
-            continue
-
-        if re.match(r'next\([^)]+\)|wnext\([^)]+\)|^\w+$', token):  # operand
-            out_stack.append(token)
-        elif token in operators:
-            while (op_stack and op_stack[-1] != '(' and precedence_of(op_stack[-1]) >= precedence_of(token)):
-                process_operator(op_stack, out_stack)
-            op_stack.append(token)
-        elif token == '(':
+        if token in ('(',):
             op_stack.append(token)
         elif token == ')':
             while op_stack and op_stack[-1] != '(':
                 process_operator(op_stack, out_stack)
-            if not op_stack:
-                raise ValueError("Mismatched parentheses: too many ')'")
             op_stack.pop()
+        elif is_operator(token):
+            while (op_stack and op_stack[-1] != '(' and
+                   precedence(op_stack[-1]) >= precedence(token)):
+                process_operator(op_stack, out_stack)
+            op_stack.append(token)
+        else:
+            out_stack.append(token)
 
-    # Final processing
     while op_stack:
-        if op_stack[-1] == '(':
-            raise ValueError("Mismatched parentheses: too many '('")
         process_operator(op_stack, out_stack)
 
     if len(out_stack) != 1:
-        raise ValueError("Malformed expression: leftover operands")
+        raise ValueError(f"Malformed expression: {expression}")
 
-    return out_stack[-1]
+    return out_stack[0]
+
+def tokenize(expr):
+    # Handles floats, ints, vars, next(...), wnext(...), and common operators
+    pattern = r'next\([^)]+\)|wnext\([^)]+\)|\d+\.\d+|\d+|[a-zA-Z_][a-zA-Z0-9_]*|==|!=|<=|>=|[+\-*/<>=()]'
+    return re.findall(pattern, expr.replace(" ", ""))
 
 
 def transform(prop):
